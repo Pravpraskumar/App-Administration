@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMsal } from '@azure/msal-react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Cloud, FileCheck2, Landmark, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Cloud, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useSession } from '@/state/SessionProvider';
 import { isMsalAvailable, loginRequest } from '@/auth/msalConfig';
@@ -103,10 +103,9 @@ export function SignInPage() {
           <img src="/assets/unify-logo.png" alt="Unify" className="h-9 w-9 object-contain" />
           <span className="text-lg font-semibold text-slate-900">Unify</span>
           <span className="h-5 w-px bg-slate-300" aria-hidden="true" />
-          <span className="text-sm font-semibold text-[#245f4c]">CreditGuard</span>
+          <span className="text-sm font-semibold text-[#245f4c]">Administration</span>
         </a>
         <div className="flex items-center gap-5">
-          <a className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-[#245f4c] sm:inline" href="/about">About Unify</a>
           <span className="text-xs font-semibold uppercase text-slate-500">v2.13.0</span>
         </div>
       </header>
@@ -115,39 +114,39 @@ export function SignInPage() {
         <section className="hidden max-w-2xl lg:block">
           <div className="mb-7 inline-flex items-center gap-2 border-l-4 border-[#d6a84b] bg-white/70 px-3 py-2 text-xs font-semibold uppercase text-[#245f4c] shadow-sm backdrop-blur">
             <ShieldCheck size={16} />
-            Financial security control
+            Administration access
           </div>
           <h2 className="max-w-xl text-5xl font-semibold leading-[1.08] text-slate-950">
-            CreditGuard
+            Administration
           </h2>
           <p className="mt-4 max-w-xl text-xl font-medium leading-8 text-[#245f4c]">
-            Govern guarantees from request through approval.
+            Manage users, organisations, and platform access.
           </p>
           <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
-            A controlled workspace for financial-security requests, document review, ordered approvals, and portfolio oversight.
+            A central workspace for organisation membership, roles, product assignments, settings, and active sessions.
           </p>
 
           <div className="mt-10 grid max-w-xl gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200 shadow-sm sm:grid-cols-3">
             <div className="bg-white p-4">
-              <FileCheck2 size={19} className="text-[#2f7d62]" />
-              <p className="mt-3 text-sm font-semibold text-slate-900">Controlled requests</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Structured records and documents</p>
+              <ShieldCheck size={19} className="text-[#2f7d62]" />
+              <p className="mt-3 text-sm font-semibold text-slate-900">Organisation access</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Membership and account status</p>
             </div>
             <div className="bg-white p-4">
-              <CheckCircle2 size={19} className="text-[#2f7d62]" />
-              <p className="mt-3 text-sm font-semibold text-slate-900">Auditable review</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Assigned review and approval history</p>
+              <ShieldCheck size={19} className="text-[#2f7d62]" />
+              <p className="mt-3 text-sm font-semibold text-slate-900">Role governance</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Roles and screen permissions</p>
             </div>
             <div className="bg-white p-4">
-              <Landmark size={19} className="text-[#2f7d62]" />
-              <p className="mt-3 text-sm font-semibold text-slate-900">Portfolio view</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Status and value oversight</p>
+              <Cloud size={19} className="text-[#2f7d62]" />
+              <p className="mt-3 text-sm font-semibold text-slate-900">Platform oversight</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Assignments and active sessions</p>
             </div>
           </div>
 
           <div className="mt-8 flex items-center gap-3 text-sm font-medium text-slate-600">
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#173f35] text-white"><LockKeyhole size={17} /></span>
-            Access is limited by organisation, role, and product assignment.
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#173f35] text-white"><ShieldCheck size={17} /></span>
+            Access is governed by organisation membership and platform roles.
           </div>
         </section>
 
@@ -155,11 +154,11 @@ export function SignInPage() {
           <div className="mb-7">
             <div className="mb-4 flex items-center gap-3 lg:hidden">
               <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#173f35] text-white"><ShieldCheck size={21} /></span>
-              <div><p className="text-xs font-semibold uppercase text-[#2f7d62]">Unify</p><p className="font-semibold text-slate-900">CreditGuard</p></div>
+              <div><p className="text-xs font-semibold uppercase text-[#2f7d62]">Unify</p><p className="font-semibold text-slate-900">Administration</p></div>
             </div>
             <p className="text-xs font-semibold uppercase text-[#2f7d62]">Secure workspace</p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-950">{t('signIn')} to CreditGuard</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Use your approved Unify credentials to continue.</p>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-950">{t('signIn')} to Administration</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Use your Unify credentials to continue.</p>
           </div>
 
           <form className="flex w-full flex-col gap-y-4" onSubmit={handleLocalLogin}>

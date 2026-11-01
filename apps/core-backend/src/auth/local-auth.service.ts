@@ -34,7 +34,7 @@ export class LocalAuthService {
       .values({ email, displayName: input.displayName, passwordHash, status: 'active' })
       .returning();
 
-    // New signups default into McDermott IT with the General User role.
+    // New signups receive the configured default organisation and General User role.
     await this.usersService.ensureDefaultMembership(user.id);
 
     return this.issue(user.id);

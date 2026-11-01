@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { AppHeader } from './AppHeader';
 import { AppSidebar } from './AppSidebar';
 import { SiteBanner } from './SiteBanner';
@@ -13,13 +13,11 @@ import { Building2, RefreshCw } from 'lucide-react';
 // Authenticated shell: fixed header, collapsible sidebar, scrollable content.
 export function AppShell() {
   const api = useApi();
-  const location = useLocation();
   const { selectedOrg, organisations, loading, error, setSelectedOrg, reloadOrganisations } = useOrg();
   const [collapsed, setCollapsed] = useState(false);
-  const [moduleName, setModuleName] = useState<string | null>(null);
   const [themeCustomizerOpen, setThemeCustomizerOpen] = useState(false);
   const { userTheme } = useTheme();
-  useAdministrationSession(api, loading ? undefined : selectedOrg?.id, !location.pathname.startsWith('/app/product/'));
+  useAdministrationSession(api, loading ? undefined : selectedOrg?.id, true);
   const palette = {
     slate: { background: '#f8fafc', surface: '#ffffff', text: '#0f172a', muted: '#64748b', border: '#e2e8f0' },
     ocean: { background: '#f0f9ff', surface: '#ffffff', text: '#0c4a6e', muted: '#64748b', border: '#bae6fd' },
@@ -90,11 +88,11 @@ export function AppShell() {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
       <SiteBanner />
-      <AppHeader onToggleSidebar={() => setCollapsed((c) => !c)} onOpenThemeCustomizer={() => setThemeCustomizerOpen(true)} moduleName={moduleName} />
+      <AppHeader onToggleSidebar={() => setCollapsed((c) => !c)} onOpenThemeCustomizer={() => setThemeCustomizerOpen(true)} />
       <div className="user-theme flex flex-1 overflow-hidden" style={themeStyle}>
         <AppSidebar collapsed={collapsed} />
         <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet context={{ setModuleName }} />
+          <Outlet />
         </main>
       </div>
       <ThemeCustomizer open={themeCustomizerOpen} onClose={() => setThemeCustomizerOpen(false)} />

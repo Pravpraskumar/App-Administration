@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CircleHelp, Menu as MenuIcon, Palette } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Logo } from './Logo';
@@ -11,14 +11,9 @@ import { getContextualHelpTopic } from '@/help/helpContent';
 interface Props {
   onToggleSidebar: () => void;
   onOpenThemeCustomizer: () => void;
-  moduleName?: string | null;
 }
 
-const tabs = [
-  { key: 'products', to: '/app/products' },
-];
-
-export function AppHeader({ onToggleSidebar, onOpenThemeCustomizer, moduleName }: Props) {
+export function AppHeader({ onToggleSidebar, onOpenThemeCustomizer }: Props) {
   const { t } = useTranslation();
   const { headerColor, headerTextColor } = useTheme();
   const location = useLocation();
@@ -41,26 +36,11 @@ export function AppHeader({ onToggleSidebar, onOpenThemeCustomizer, moduleName }
         >
           <MenuIcon size={20} />
         </button>
-        <Logo textColor={headerTextColor} moduleName={moduleName} />
+        <Logo textColor={headerTextColor} />
       </div>
 
       {/* Middle: primary tabs (hidden on small screens) */}
       <nav className="hidden items-center gap-1 md:flex">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.key}
-            to={tab.to}
-            className={({ isActive }) =>
-              clsx(
-                'rounded-md px-4 py-2 text-sm font-medium',
-                isActive ? 'bg-brand/10 text-brand-header' : 'hover:bg-black/5',
-              )
-            }
-            style={({ isActive }) => (isActive ? undefined : { color: headerTextColor })}
-          >
-            {t(tab.key)}
-          </NavLink>
-        ))}
         <Link
           to={helpPath}
           state={helpState}

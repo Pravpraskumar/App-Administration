@@ -4,6 +4,7 @@ import { CORE_DB } from '../db/database.module';
 import type { CoreDb } from '../db';
 import { organisations, projects, users } from '../db/schema';
 import type { CreateProjectDto, ProjectStatus, UpdateProjectDto } from './dto/project.dto';
+import { GLOBAL_ORGANISATION_SLUG } from '../organisations/organisation-policy';
 
 @Injectable()
 export class ProjectsService {
@@ -13,8 +14,8 @@ export class ProjectsService {
     const [organisation] = await this.db
       .select({ id: organisations.id })
       .from(organisations)
-      .where(eq(organisations.slug, 'mcdermott-it'));
-    if (!organisation) throw new NotFoundException('McDermott IT organisation not found');
+      .where(eq(organisations.slug, GLOBAL_ORGANISATION_SLUG));
+    if (!organisation) throw new NotFoundException('Global Organisation not found');
     return organisation.id;
   }
 

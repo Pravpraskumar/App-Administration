@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { createDb, createPool } from './index';
 import { hashPassword } from '../common/password';
 import {
@@ -17,6 +17,7 @@ import {
   users,
 } from './schema';
 import { EMAIL_TEMPLATE_DEFINITIONS } from '../settings/email-template-definitions';
+import { GLOBAL_ORGANISATION_NAME, GLOBAL_ORGANISATION_SLUG } from '../organisations/organisation-policy';
 
 config({ path: resolve(__dirname, '../../../../.env') });
 
@@ -68,25 +69,22 @@ async function main() {
   }
 
   // --- Canonical organisation ---
-  let [globalOrg] = await db.select().from(organisations).where(eq(organisations.slug, 'mcdermott-it'));
+  let [globalOrg] = await db.select().from(organisations).where(eq(organisations.slug, GLOBAL_ORGANISATION_SLUG));
   if (!globalOrg) {
-    [globalOrg] = await db.select().from(organisations).where(eq(organisations.slug, 'global'));
+    [globalOrg] = await db.select().from(organisations).where(eq(organisations.slug, 'mcdermott-it'));
   }
   if (!globalOrg) {
     [globalOrg] = await db
       .insert(organisations)
-      .values({ name: 'McDermott IT', slug: 'mcdermott-it', status: 'active', ownerUserId: admin.id })
+      .values({ name: GLOBAL_ORGANISATION_NAME, slug: GLOBAL_ORGANISATION_SLUG, status: 'active', ownerUserId: admin.id })
       .returning();
   } else {
     [globalOrg] = await db
       .update(organisations)
-      .set({ name: 'McDermott IT', slug: 'mcdermott-it', status: 'active', ownerUserId: admin.id })
+      .set({ name: GLOBAL_ORGANISATION_NAME, slug: GLOBAL_ORGANISATION_SLUG, status: 'active', ownerUserId: admin.id })
       .where(eq(organisations.id, globalOrg.id))
       .returning();
   }
-
-  // Intentional convergence: the seeded platform has one tenant.
-  await db.delete(organisations).where(ne(organisations.id, globalOrg.id));
 
   const allUsers = await db.select({ id: users.id }).from(users);
   for (const user of allUsers) {
@@ -414,7 +412,7 @@ async function main() {
       );
   }
 
-  // --- Application settings (single row, default org = McDermott IT) ---
+  // --- Application settings (single row, default org = Global Organisation) ---
   const existingSettings = await db.select().from(appSettings).limit(1);
   if (existingSettings.length === 0) {
     await db.insert(appSettings).values({ defaultOrgId: globalOrg.id });

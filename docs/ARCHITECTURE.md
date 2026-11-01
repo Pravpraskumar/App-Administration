@@ -1,10 +1,10 @@
 # Designer Platform Architecture
 
-This guide explains the platform's architecture, technology choices, ownership boundaries, and principal workflows. It is intended as a visual introduction for engineers, reviewers, and operators. For detailed routes and business rules, see [Application Logic](APPLICATION_LOGIC.md).
+This guide explains the administration platform's architecture, technology choices, ownership boundaries, and principal workflows. Product service runtimes are maintained separately. For retained product data contracts and detailed core routes, see [Application Logic](APPLICATION_LOGIC.md).
 
 ## 1. Platform at a glance
 
-Designer Platform is a multi-tenant SaaS monorepo. A shared control plane manages identity, organisations, permissions, product licensing, and sessions. Independently deployable product services own their domain data.
+Designer Platform is a multi-tenant administration platform. The included core control plane manages identity, organisations, permissions, product licensing, connections, and sessions. Product service runtimes are not included in this repository.
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "22px"}, "flowchart": {"useMaxWidth": false}, "sequence": {"useMaxWidth": false}, "state": {"useMaxWidth": false}}}%%
@@ -12,22 +12,14 @@ flowchart LR
     User[Browser user]
     SPA[React SPA]
     Core[Core control plane]
-    CG[CreditGuard service]
-    Prime[PRIME service]
     CoreDB[(platform_core)]
-    CGDB[(creditguard)]
-    PrimeDB[(prime)]
 
     User --> SPA
     SPA -->|/api/*| Core
-    SPA -->|/creditguard-api/*| CG
     Core --> CoreDB
-    CG --> CGDB
-    Prime --> PrimeDB
-    CG -. identity and protected integration calls .-> Core
 ```
 
-The central design rule is **control-plane data stays in core; product-domain data stays in the owning product service**. There are no cross-database foreign keys or distributed transactions.
+The central design rule is **control-plane data stays in core; product-domain data belongs to its owning product service**. Product connection settings and existing product data contracts remain in core, but product runtimes must be deployed separately.
 
 ## 2. Technology stack
 
@@ -35,19 +27,19 @@ The central design rule is **control-plane data stays in core; product-domain da
 | --- | --- | --- |
 | Workspace | npm workspaces, Node.js 20+ | Monorepo dependency and script management |
 | Web client | React 18, TypeScript, Vite 5 | Single-page application and development proxy |
-| Navigation | React Router 6 | Public, workspace, product, organisation, and admin routes |
+| Navigation | React Router 6 | Public, organisation, and administration routes |
 | Server state | TanStack Query 5 | Query lifecycle and cache infrastructure |
 | Styling | Tailwind CSS 3, PostCSS | Responsive UI styling |
 | Icons | Lucide React | Consistent accessible interface icons |
 | Authentication client | MSAL Browser/React | Azure AD B2C redirect and token acquisition |
-| APIs | NestJS 10, TypeScript | Core and product HTTP services |
+| APIs | NestJS 10, TypeScript | Core administration HTTP service |
 | Validation | class-validator, class-transformer | Core DTO validation and transformation |
 | Persistence | PostgreSQL 16, Drizzle ORM | Isolated relational stores and migrations |
 | Local authentication | bcryptjs, JSON Web Tokens | Password hashing and platform-issued sessions |
 | Email | Nodemailer | Review notifications and auditable delivery attempts |
-| Documents | Local filesystem or Azure Blob Storage | Private CreditGuard attachment content |
+| Documents | External product-service storage | Product attachment content is not served by this repository |
 | Browser testing | Playwright | Deterministic end-to-end route and workflow tests |
-| Cloud definition | Azure Bicep | Container Apps, PostgreSQL, Key Vault, and logging scaffold |
+| Database | External PostgreSQL | Core database provisioned outside this repository |
 
 ## 3. Monorepo design
 
@@ -57,36 +49,26 @@ flowchart TB
     Repo[Designer Platform]
     Apps[apps]
     Packages[packages]
-    Infra[infra]
     Tests[tests/e2e]
     Docs[docs]
 
     Repo --> Apps
     Repo --> Packages
-    Repo --> Infra
     Repo --> Tests
     Repo --> Docs
 
     Apps --> Frontend[frontend]
     Apps --> CoreApp[core-backend]
-    Apps --> CGApp[creditguard-service]
-    Apps --> PrimeApp[prime-service]
     Packages --> Shared[shared contracts]
-    Infra --> Compose[Docker Compose]
-    Infra --> Bicep[Azure Bicep]
-
     Shared -. TypeScript contracts .-> Frontend
     Shared -. TypeScript contracts .-> CoreApp
 ```
 
 | Workspace | Responsibility |
 | --- | --- |
-| `apps/frontend` | One responsive SPA for platform and product experiences |
+| `apps/frontend` | Responsive SPA for platform and administration experiences |
 | `apps/core-backend` | Identity, tenancy, RBAC, menus, products, projects, settings, licensing, sessions, email, and encrypted integration configuration |
-| `apps/creditguard-service` | Financial-security requests, attachments, reviewer state, approvers, Signit envelope references, and reports data |
-| `apps/prime-service` | PRIME service/database scaffold; domain behavior is not yet defined |
 | `packages/shared` | Shared TypeScript API contracts and role constants |
-| `infra` | Local PostgreSQL and intended Azure infrastructure |
 | `tests/e2e` | Playwright tests with deterministic browser-level API mocks |
 
 ## 4. Runtime topology
@@ -97,26 +79,19 @@ flowchart LR
     Browser[Browser<br/>localhost:5173]
     Vite[Vite dev server and proxy]
     CoreAPI[Core NestJS API<br/>localhost:4000/api]
-    CGAPI[CreditGuard NestJS API<br/>localhost:4101/api]
-    PrimeAPI[PRIME NestJS API<br/>localhost:4102/api]
-    Postgres[(PostgreSQL<br/>localhost:5432)]
+    CoreDB[(External database<br/>platform_core)]
 
     Browser --> Vite
     Vite -->|/api| CoreAPI
-    Vite -->|/creditguard-api<br/>rewrite to /api| CGAPI
-    CoreAPI -->|platform_core| Postgres
-    CGAPI -->|creditguard| Postgres
-    PrimeAPI -->|prime| Postgres
+    CoreAPI -->|platform_core| CoreDB
 ```
 
-The browser uses relative URLs. In development, Vite routes core traffic and rewrites CreditGuard traffic. Product services are separate runtimes even when they share one local PostgreSQL server.
+The browser uses relative URLs. In development, Vite routes core traffic. Core connects to its externally provisioned database; product services and their databases are managed separately.
 
 | Runtime | Port | Public prefix | Database |
 | --- | ---: | --- | --- |
 | Frontend | 5173 | `/` | None |
 | Core backend | 4000 | `/api` | `platform_core` |
-| CreditGuard | 4101 | `/api` | `creditguard` |
-| PRIME | 4102 | `/api` | `prime` |
 
 ## 5. Frontend design
 
@@ -188,7 +163,9 @@ Authorization has several dimensions:
 
 Every tenant-sensitive query must authorize the supplied organisation identifier. UI hiding alone is never the security boundary.
 
-## 7. Data ownership
+## 7. Retained product data ownership reference
+
+This diagram documents data ownership for separately deployed product services; those service runtimes are not included in this repository.
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "22px"}, "flowchart": {"useMaxWidth": false}, "sequence": {"useMaxWidth": false}, "state": {"useMaxWidth": false}}}%%
@@ -213,7 +190,7 @@ flowchart TB
 
 Cross-service actions are coordinated application workflows, not atomic distributed transactions. Each service must fail explicitly and preserve recoverable state when a downstream operation fails.
 
-## 8. CreditGuard request lifecycle
+## 8. Retained CreditGuard lifecycle reference
 
 ```mermaid
 %%{init: {"themeVariables": {"fontSize": "22px"}, "flowchart": {"useMaxWidth": false}, "sequence": {"useMaxWidth": false}, "state": {"useMaxWidth": false}}}%%
@@ -230,7 +207,7 @@ stateDiagram-v2
 
 The API owns these workflow transitions. While attachments are editable, **Attach Request** creates a new McDermott-branded PDF from request and business details, excluding approval and approver fields, and atomically inserts or replaces its attachment metadata. Before review completion, the requestor or an administrator may reassign the reviewer without unlocking request fields; the former reviewer receives a pullback email and the replacement receives the standard review notification. Review completion is a separate status/audit transition and does not generate a document. Forms become progressively more restricted as the request advances, and sent requests are immutable through ordinary edit, attachment, and approver endpoints. Refresh updates approver records but deliberately leaves the request at `Sent for Approval`.
 
-## 9. Signit approval architecture
+## 9. Retained Signit integration reference
 
 Signit credentials are tenant/product configuration owned by core. They are encrypted at rest with AES-256-GCM and never returned to the browser or CreditGuard service.
 
@@ -428,7 +405,7 @@ Important constraints:
 | Shared control plane | One source for identity, tenancy, licensing, and navigation | Product workflows depend on core availability |
 | Database per product | Strong ownership and reduced accidental coupling | Cross-service workflows need explicit recovery |
 | One SPA | Consistent navigation and session experience | Frontend must respect multiple API/error contracts |
-| Core integration broker | Browser and product service never receive Signit credentials | Core handles an additional protected integration surface |
+| Core integration broker | Browser and external product runtime never receive Signit credentials | Core handles an additional protected integration surface |
 | Drizzle migrations | Typed schema and inspectable SQL | Deployment ordering must be managed explicitly |
 | Deterministic E2E mocks | Fast and repeatable workflow tests | Real service integration needs an additional test layer |
 
@@ -441,6 +418,6 @@ Important constraints:
 | Agent security and change policy | [Agent Guidelines](../AGENTS.md) |
 | Frontend implementation | `apps/frontend/src` |
 | Core implementation | `apps/core-backend/src` |
-| CreditGuard implementation | `apps/creditguard-service/src` |
+| Retained product contract reference | [Application Logic](APPLICATION_LOGIC.md) |
 | Shared contracts | `packages/shared/src` |
-| Local/cloud infrastructure | `infra` |
+| Database connection settings | `.env.example` |

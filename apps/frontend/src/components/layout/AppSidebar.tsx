@@ -21,6 +21,15 @@ function renderIcon(name: string | null) {
   return Icon ? <Icon size={18} /> : <Icons.Circle size={18} />;
 }
 
+function filterProductMenus(nodes: MenuNode[]): MenuNode[] {
+  return nodes.flatMap((node) => {
+    if (node.route === '/app/products' || node.route?.startsWith('/app/product/')) return [];
+    const children = filterProductMenus(node.children);
+    if (!node.route && children.length === 0) return [];
+    return [{ ...node, children }];
+  });
+}
+
 function MenuItem({ node, collapsed, depth }: { node: MenuNode; collapsed: boolean; depth: number }) {
   const [open, setOpen] = useState(true);
   const hasChildren = node.children.length > 0;
@@ -37,7 +46,6 @@ function MenuItem({ node, collapsed, depth }: { node: MenuNode; collapsed: boole
       {node.route ? (
         <NavLink
           to={node.route}
-          end={node.route === '/app/product/CreditGuard'}
           className={({ isActive }) =>
             clsx(
               'flex items-center rounded-md px-3 py-2 text-sm transition',
@@ -101,7 +109,7 @@ export function AppSidebar({ collapsed }: Props) {
   const isOrganisationAdmin =
     selectedOrg?.membership === 'Owner' || selectedOrg?.membership === 'Admin';
   const canManageOrganisation = isOrganisationAdmin || hasGlobalUsers(menus);
-  let visibleMenus = menus;
+  let visibleMenus = filterProductMenus(menus);
   if (selectedOrg && !canManageOrganisation) {
     const hideOrganisationAdminMenus = (nodes: MenuNode[]): MenuNode[] =>
       nodes
@@ -109,7 +117,7 @@ export function AppSidebar({ collapsed }: Props) {
         .map((node) => ({ ...node, children: hideOrganisationAdminMenus(node.children) }));
     visibleMenus = hideOrganisationAdminMenus(visibleMenus);
   }
-  if (selectedOrg && selectedOrg.slug !== 'mcdermott-it') {
+  if (selectedOrg && selectedOrg.slug !== 'global') {
     const globalOnlyRoutes = ['/admin/users', '/admin/user-assignments', '/admin/user-settings', '/admin/projects', '/admin/settings', '/admin/email-templates'];
     const hideGlobalMenus = (nodes: MenuNode[]): MenuNode[] =>
       nodes
@@ -121,7 +129,7 @@ export function AppSidebar({ collapsed }: Props) {
   useEffect(() => {
     if (!selectedOrg) return;
     if (
-      selectedOrg.slug !== 'mcdermott-it' &&
+      selectedOrg.slug !== 'global' &&
       ['/admin/users', '/admin/user-assignments', '/admin/user-settings', '/admin/projects', '/admin/settings', '/admin/email-templates'].includes(location.pathname)
     ) {
       navigate('/org/members', { replace: true });

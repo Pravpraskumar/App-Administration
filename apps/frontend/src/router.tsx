@@ -1,22 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RequireAuth } from '@/auth/RequireAuth';
 import { AppShell } from '@/components/layout/AppShell';
-import { MarketingPage } from '@/pages/public/MarketingPage';
-import { AboutPage } from '@/pages/public/AboutPage';
 import { SignInPage } from '@/pages/public/SignInPage';
 import { SignUpPage } from '@/pages/public/SignUpPage';
 import { DashboardPage } from '@/pages/app/DashboardPage';
-import { ProductsPage } from '@/pages/app/ProductsPage';
-import { ProductLandingPage } from '@/pages/app/ProductLandingPage';
-import { CreditGuardRequestsPage } from '@/pages/app/creditguard/CreditGuardRequestsPage';
-import { CreditGuardNewRequestPage } from '@/pages/app/creditguard/CreditGuardNewRequestPage';
-import { CreditGuardEditRequestPage } from '@/pages/app/creditguard/CreditGuardEditRequestPage';
-import { CreditGuardRequestApproversPage } from '@/pages/app/creditguard/CreditGuardRequestApproversPage';
-import { CreditGuardRequestApprovalPage } from '@/pages/app/creditguard/CreditGuardRequestApprovalPage';
-import { CreditGuardBusinessEntitiesPage } from '@/pages/app/creditguard/CreditGuardBusinessEntitiesPage';
-import { CreditGuardModuleUsersPage } from '@/pages/app/creditguard/CreditGuardModuleUsersPage';
-import { CreditGuardIntegrationPage } from '@/pages/app/creditguard/CreditGuardIntegrationPage';
-import { CreditGuardReportsPage } from '@/pages/app/creditguard/CreditGuardReportsPage';
 import { ResourcesPage } from '@/pages/app/ResourcesPage';
 import { AdminConnectionsPage } from '@/pages/admin/AdminConnectionsPage';
 import { AdminLicensesPage } from '@/pages/admin/AdminLicensesPage';
@@ -38,8 +25,7 @@ import { OrganisationProjectsPage } from '@/pages/org/OrganisationProjectsPage';
 import { AccountSettingsPage } from '@/pages/account/AccountSettingsPage';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <MarketingPage /> },
-  { path: '/about', element: <AboutPage /> },
+  { path: '/', element: <Navigate to="/signin" replace /> },
   { path: '/signin', element: <SignInPage /> },
   { path: '/signup', element: <SignUpPage /> },
   {
@@ -51,17 +37,6 @@ export const router = createBrowserRouter([
     children: [
       { path: '/app', element: <Navigate to="/app/dashboard" replace /> },
       { path: '/app/dashboard', element: <DashboardPage /> },
-      { path: '/app/products', element: <ProductsPage /> },
-      { path: '/app/product/:code', element: <ProductLandingPage /> },
-      { path: '/app/product/CreditGuard/requests', element: <CreditGuardRequestsPage /> },
-      { path: '/app/product/CreditGuard/requests/new', element: <CreditGuardNewRequestPage /> },
-      { path: '/app/product/CreditGuard/requests/:requestId/edit', element: <CreditGuardEditRequestPage /> },
-      { path: '/app/product/CreditGuard/requests/:requestId/approvers', element: <CreditGuardRequestApproversPage /> },
-      { path: '/app/product/CreditGuard/requests/:requestId/approval', element: <CreditGuardRequestApprovalPage /> },
-      { path: '/app/product/CreditGuard/reports', element: <CreditGuardReportsPage /> },
-      { path: '/app/product/CreditGuard/application-setup/business-entities', element: <CreditGuardBusinessEntitiesPage /> },
-      { path: '/app/product/CreditGuard/application-setup/module-users', element: <CreditGuardModuleUsersPage /> },
-      { path: '/app/product/CreditGuard/application-setup/integration', element: <CreditGuardIntegrationPage /> },
       { path: '/app/resources', element: <Navigate to="/app/help" replace /> },
       { path: '/app/help', element: <ResourcesPage /> },
       { path: '/app/help/:topicId', element: <ResourcesPage /> },
@@ -85,5 +60,5 @@ export const router = createBrowserRouter([
       { path: '/org/admin', element: <OrgAdminPage /> },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <Navigate to="/signin" replace /> },
 ]);

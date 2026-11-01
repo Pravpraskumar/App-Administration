@@ -78,7 +78,7 @@ export function AdminEmailLogsPage() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <label className="text-sm font-medium text-slate-700">Module<select value={module} onChange={(event) => setModule(event.target.value)} className={`ml-2 ${selectClass}`}><option value="">All modules</option><option value="CreditGuard">CreditGuard</option></select></label>
+        <label className="text-sm font-medium text-slate-700">Module<input aria-label="Module" placeholder="All modules" value={module} onChange={(event) => setModule(event.target.value)} className={`ml-2 ${selectClass}`} /></label>
         <label className="text-sm font-medium text-slate-700">Status<select value={status} onChange={(event) => setStatus(event.target.value)} className={`ml-2 ${selectClass}`}><option value="">All statuses</option><option value="Sent">Sent</option><option value="Failed">Failed</option></select></label>
       </div>
 

@@ -5,6 +5,7 @@ import type { CoreDb } from '../db';
 import { organisationModules, organisations, organisationTeams, organisationTeamUsers, organisationUserProjects, organisationUsers, products, projects, roles, sessions, userRoles, users } from '../db/schema';
 import { SettingsService } from '../settings/settings.service';
 import { hashPassword } from '../common/password';
+import { resolveDefaultOrganisationId, GLOBAL_ORGANISATION_SLUG } from '../organisations/organisation-policy';
 
 export type EntityStatus = 'active' | 'suspended' | 'pending';
 
@@ -23,28 +24,26 @@ export class UsersService {
     private readonly settings: SettingsService,
   ) {}
 
-  // Assigns a user to the configured default organisation (falling back to
-  // McDermott IT) and the General User role. Called for every new signup.
+  private async defaultOrganisationId(): Promise<string> {
+    const configuredOrgId = await this.settings.getDefaultOrgId();
+    if (configuredOrgId) return configuredOrgId;
+
+    const [globalOrg] = await this.db
+      .select({ id: organisations.id })
+      .from(organisations)
+      .where(eq(organisations.slug, GLOBAL_ORGANISATION_SLUG));
+    return resolveDefaultOrganisationId(null, globalOrg?.id ?? null);
+  }
+
+  // Assigns new users to the configured default organisation and General User role.
   async ensureDefaultMembership(userId: string): Promise<void> {
-    let orgId = await this.settings.getDefaultOrgId();
-    if (!orgId) {
-      const [globalOrg] = await this.db
-        .select()
-        .from(organisations)
-        .where(eq(organisations.slug, 'mcdermott-it'));
-      orgId = globalOrg?.id ?? null;
-    }
+    const orgId = await this.defaultOrganisationId();
     await this.ensureBasicAccess(userId, orgId);
   }
 
   async createExternalUserWithBasicAccess(input: { b2cOid: string; email: string; displayName: string }) {
+    const orgId = await this.defaultOrganisationId();
     return this.db.transaction(async (tx) => {
-      const [mcDermott] = await tx
-        .select({ id: organisations.id })
-        .from(organisations)
-        .where(eq(organisations.slug, 'mcdermott-it'));
-      if (!mcDermott) throw new NotFoundException('McDermott IT organisation is not configured');
-
       const [generalRole] = await tx.select({ id: roles.id }).from(roles).where(eq(roles.name, 'General User'));
       if (!generalRole) throw new NotFoundException('General User role is not configured');
 
@@ -54,7 +53,7 @@ export class UsersService {
         .returning();
       await tx
         .insert(organisationUsers)
-        .values({ orgId: mcDermott.id, userId: user.id, membership: 'Member', status: 'active' });
+        .values({ orgId, userId: user.id, membership: 'Member', status: 'active' });
       await tx
         .insert(userRoles)
         .values({ userId: user.id, roleId: generalRole.id, orgId: null });
@@ -62,13 +61,11 @@ export class UsersService {
     });
   }
 
-  private async ensureBasicAccess(userId: string, orgId: string | null): Promise<void> {
-    if (orgId) {
-      await this.db
-        .insert(organisationUsers)
-        .values({ orgId, userId, membership: 'Member', status: 'active' })
-        .onConflictDoNothing();
-    }
+  private async ensureBasicAccess(userId: string, orgId: string): Promise<void> {
+    await this.db
+      .insert(organisationUsers)
+      .values({ orgId, userId, membership: 'Member', status: 'active' })
+      .onConflictDoNothing();
 
     const [generalRole] = await this.db.select().from(roles).where(eq(roles.name, 'General User'));
     if (generalRole) {

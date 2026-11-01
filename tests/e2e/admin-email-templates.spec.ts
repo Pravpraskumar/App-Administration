@@ -9,10 +9,10 @@ test('global administrator edits an event template and inserts an allowed placeh
   await page.goto('/admin/email-templates');
 
   await expect(page.getByRole('heading', { name: 'Email Templates' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Request Review' })).toBeVisible();
-  await page.getByLabel('Subject').fill('Review required: ');
-  await page.getByRole('button', { name: 'Insert requestNumber placeholder' }).click();
-  await page.getByLabel('Body').fill('Hello {{recipientName}}, please review {{requestNumber}}.');
+  await expect(page.getByRole('button', { name: 'System Notification' })).toBeVisible();
+  await page.getByLabel('Subject').fill('Notice: ');
+  await page.getByRole('button', { name: 'Insert referenceId placeholder' }).click();
+  await page.getByLabel('Body').fill('Hello {{recipientName}}, reference {{referenceId}}.');
 
   const requestPromise = page.waitForRequest((request) =>
     request.method() === 'PUT' && request.url().endsWith('/api/notifications/email-templates/template-1'),
@@ -21,8 +21,8 @@ test('global administrator edits an event template and inserts an allowed placeh
   const request = await requestPromise;
 
   expect(request.postDataJSON()).toEqual({
-    subjectTemplate: 'Review required: {{requestNumber}}',
-    bodyTemplate: 'Hello {{recipientName}}, please review {{requestNumber}}.',
+    subjectTemplate: 'Notice: {{referenceId}}',
+    bodyTemplate: 'Hello {{recipientName}}, reference {{referenceId}}.',
   });
 });
 

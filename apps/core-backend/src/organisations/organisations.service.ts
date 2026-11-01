@@ -7,6 +7,7 @@ import type { CoreDb } from '../db';
 import { moduleUserDesignations, organisationModules, organisationProductIntegrations, organisations, organisationTeams, organisationTeamUsers, organisationUserProjects, organisationUsers, products, projectModules, projects, roles, userModuleProjects, userRoles, users } from '../db/schema';
 import type { AuthUser } from '../auth/auth-user.interface';
 import { decryptSecret, encryptSecret } from '../common/crypto';
+import { assertOrganisationMembershipCanBeRemoved, GLOBAL_ORGANISATION_SLUG } from './organisation-policy';
 
 export type EntityStatus = 'active' | 'suspended' | 'pending';
 
@@ -180,6 +181,11 @@ export class OrganisationsService {
   async update(id: string, input: { name?: string; slug?: string }) {
     const [existing] = await this.db.select().from(organisations).where(eq(organisations.id, id));
     if (!existing) throw new NotFoundException('Organisation not found');
+    if (existing.slug === GLOBAL_ORGANISATION_SLUG
+      && ((input.name !== undefined && input.name !== existing.name)
+        || (input.slug !== undefined && input.slug !== existing.slug))) {
+      throw new ConflictException('Global Organisation name and slug cannot be changed');
+    }
     if (input.slug && input.slug !== existing.slug) await this.assertSlugFree(input.slug, id);
 
     const [updated] = await this.db
@@ -193,12 +199,12 @@ export class OrganisationsService {
     return updated;
   }
 
-  // Deactivate/reactivate an organisation (the canonical McDermott IT org cannot be suspended).
+  // Deactivate/reactivate an organisation (Global Organisation cannot be suspended).
   async setStatus(id: string, status: EntityStatus) {
     const [existing] = await this.db.select().from(organisations).where(eq(organisations.id, id));
     if (!existing) throw new NotFoundException('Organisation not found');
-    if (existing.slug === 'global' && status !== 'active') {
-      throw new ConflictException('The McDermott IT organisation cannot be deactivated');
+    if (existing.slug === GLOBAL_ORGANISATION_SLUG && status !== 'active') {
+      throw new ConflictException('Global Organisation cannot be deactivated');
     }
     const [updated] = await this.db
       .update(organisations)
@@ -1400,10 +1406,12 @@ export class OrganisationsService {
   async removeTeamMember(orgId: string, userId: string, actor: AuthUser) {
     await this.assertCanManageTeam(orgId, actor);
     const [member] = await this.db
-      .select({ membership: organisationUsers.membership })
+      .select({ membership: organisationUsers.membership, orgSlug: organisations.slug })
       .from(organisationUsers)
+      .innerJoin(organisations, eq(organisationUsers.orgId, organisations.id))
       .where(and(eq(organisationUsers.orgId, orgId), eq(organisationUsers.userId, userId)));
     if (!member) throw new NotFoundException('Organisation member not found');
+    assertOrganisationMembershipCanBeRemoved(member.orgSlug);
     if (member.membership === 'Owner') {
       throw new ConflictException('The organisation Owner assignment cannot be removed');
     }

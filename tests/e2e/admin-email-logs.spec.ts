@@ -15,8 +15,8 @@ test('global administrator can review and filter email delivery logs', async ({ 
   await expect(page.getByText(emailDeliveryLog.smtpConfigurationName)).toBeVisible();
   await expect(page.getByRole('table').getByText('Sent', { exact: true })).toBeVisible();
 
-  const filteredRequest = page.waitForRequest((request) => request.url().includes('/api/notifications/email-logs?module=CreditGuard'));
-  await page.getByLabel('Module').selectOption('CreditGuard');
+  const filteredRequest = page.waitForRequest((request) => request.url().includes('/api/notifications/email-logs?module=External+module'));
+  await page.getByLabel('Module').fill('External module');
   await filteredRequest;
 });
 

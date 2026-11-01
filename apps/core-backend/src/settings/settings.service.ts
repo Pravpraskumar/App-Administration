@@ -4,6 +4,7 @@ import { CORE_DB } from '../db/database.module';
 import type { CoreDb } from '../db';
 import { appSettings, organisations, smtpConfigurations, type AppSettings } from '../db/schema';
 import { encryptSecret } from '../common/crypto';
+import { GLOBAL_ORGANISATION_SLUG } from '../organisations/organisation-policy';
 
 export interface UpdateSettingsInput {
   defaultOrgId?: string | null;
@@ -48,7 +49,7 @@ export class SettingsService {
       const [defaultOrg] = await this.db
         .select()
         .from(organisations)
-        .where(eq(organisations.slug, 'mcdermott-it'));
+        .where(eq(organisations.slug, GLOBAL_ORGANISATION_SLUG));
       [row] = await this.db
         .insert(appSettings)
         .values({ defaultOrgId: defaultOrg?.id ?? null })

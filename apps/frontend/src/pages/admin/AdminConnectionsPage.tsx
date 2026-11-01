@@ -24,12 +24,12 @@ const postgresConnection: ConnectionForm = {
   ssl: true,
 };
 
-const primeMssqlConnection: ConnectionForm = {
+const mssqlConnection: ConnectionForm = {
   databaseType: 'mssql',
   host: 'localhost',
   port: 1433,
-  database: 'prime',
-  username: 'sa',
+  database: '',
+  username: '',
   password: '',
   ssl: true,
 };
@@ -52,8 +52,7 @@ export function AdminConnectionsPage() {
   useEffect(() => {
     if (!selected) return;
     setStatus('');
-    const product = products.find((candidate) => candidate.id === selected);
-    const defaults = product?.code.toUpperCase() === 'PRIME' ? primeMssqlConnection : postgresConnection;
+    const defaults = postgresConnection;
     api
       .get<Partial<ConnectionForm> | null>(`/products/${selected}/connection`)
       .then((connection) => setForm({ ...defaults, ...(connection ?? {}), password: '' }))
@@ -98,7 +97,7 @@ export function AdminConnectionsPage() {
               value={form.databaseType}
               onChange={(e) => {
                 const databaseType = e.target.value as ConnectionForm['databaseType'];
-                const defaults = databaseType === 'mssql' ? primeMssqlConnection : postgresConnection;
+                const defaults = databaseType === 'mssql' ? mssqlConnection : postgresConnection;
                 setForm({ ...defaults, databaseType });
               }}
             >

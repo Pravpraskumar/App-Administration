@@ -3,16 +3,6 @@ import { setupAuthenticatedApp } from './support/app';
 
 const routes = [
   ['/app/dashboard', 'Dashboard'],
-  ['/app/products', 'Products'],
-  ['/app/product/PRIME', 'PRIME'],
-  ['/app/product/CreditGuard', 'CreditGuard Process Guide'],
-  ['/app/product/CreditGuard/requests', 'Requests'],
-  ['/app/product/CreditGuard/requests/new', 'New Company Guarantee Request'],
-  ['/app/product/CreditGuard/requests/request-1/edit', 'Edit Company Guarantee Request'],
-  ['/app/product/CreditGuard/requests/request-1/approvers', 'Assign Approvers'],
-  ['/app/product/CreditGuard/reports', 'Reports & Analytics'],
-  ['/app/product/CreditGuard/application-setup/business-entities', 'Business Entities'],
-  ['/app/product/CreditGuard/application-setup/module-users', 'Module Users'],
   ['/app/help', 'Help Center'],
   ['/app/resources', 'Help Center'],
   ['/account/settings', 'Account Settings'],
@@ -46,9 +36,11 @@ for (const [path, heading] of routes) {
   });
 }
 
-test('/app redirects to the dashboard and unknown routes return home', async ({ page }) => {
+test('/app redirects to the dashboard and retired product routes return to sign-in', async ({ page }) => {
   await page.goto('/app');
   await expect(page).toHaveURL(/\/app\/dashboard$/);
+  await page.goto('/app/products');
+  await expect(page).toHaveURL(/\/signin$/);
   await page.goto('/not-a-route');
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/signin$/);
 });

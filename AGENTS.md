@@ -68,10 +68,7 @@ Always:
 | --- | --- |
 | `apps/frontend` | React 18/Vite SPA, React Router, TanStack Query, MSAL, organisation/session/theme state |
 | `apps/core-backend` | NestJS control plane for identity, account, organisations, users, teams, projects, roles, menus, products, settings, and license sessions |
-| `apps/creditguard-service` | NestJS CreditGuard domain API and Drizzle schema |
-| `apps/prime-service` | NestJS PRIME placeholder service; do not invent domain behavior without requirements |
 | `packages/shared` | Cross-workspace API contract types and role constants |
-| `infra` | PostgreSQL development infrastructure and Azure Bicep |
 | `tests/e2e` | Playwright route and workflow tests using deterministic browser-level API mocks |
 
 ## Runtime Boundaries
@@ -80,8 +77,6 @@ Always:
 | --- | ---: | --- | --- |
 | Frontend | 5173 | `/` | none |
 | Core backend | 4000 | `/api/*` | `platform_core` |
-| CreditGuard | 4101 | `/creditguard-api/*` rewritten to `/api/*` | `creditguard` |
-| PRIME | 4102 | no primary SPA flow yet | `prime` |
 
 Core owns identity, tenancy, permissions, product assignment, and licensing. Product services own product-domain records. There are no distributed transactions across these databases.
 

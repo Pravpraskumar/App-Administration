@@ -1,17 +1,16 @@
 # Application Logic Reference
 
-This document is the canonical compact context for engineers and AI models working on Designer Platform. It describes implemented behavior, ownership boundaries, request flows, and important invariants. Read the source before changing behavior when this document and code differ.
+This document is the canonical compact context for engineers and AI models working on Designer Platform. It describes implemented core behavior, retained product data contracts, ownership boundaries, and important invariants. Product-service runtime folders and product-facing frontend routes are not included in this repository; product-specific details below are retained as contract/history references, not runnable workflows. Read the source before changing behavior when this document and code differ.
 
 ## 1. System purpose
 
-Designer Platform is a multi-tenant control plane plus product modules:
+Designer Platform is a multi-tenant administration control plane:
 
 - **Core platform:** users, authentication, organisations, memberships, teams, projects, roles, menus, product assignment, settings, and concurrent sessions.
-- **CreditGuard:** financial-security requests, business entities, reports, and a process guide.
-- **PRIME:** service/database scaffolding only.
-- **Frontend:** one SPA for public, workspace, product, organisation, and global-administration experiences.
+- **Product administration:** product catalog, licensing, connection settings, and shared access controls remain in core.
+- **Frontend:** one SPA for authentication, organisation, account, and global-administration experiences.
 
-Each product has its own service and database. The core database stores assignment and connection metadata but not CreditGuard request data.
+Product services and their databases are external to this repository. The core database stores assignment and connection metadata, not product-domain data.
 
 ## 2. Runtime topology
 
@@ -19,12 +18,10 @@ Each product has its own service and database. The core database stores assignme
 | --- | ---: | --- | --- |
 | Frontend | 5173 | `/` | none |
 | Core backend | 4000 | `/api` | `platform_core` |
-| CreditGuard | 4101 | `/api` | `creditguard` |
-| PRIME | 4102 | `/api` | `prime` |
 
-The frontend calls relative paths. Vite forwards `/api/*` to core and rewrites `/creditguard-api/*` to CreditGuard `/api/*`.
+The frontend calls relative paths. Vite forwards `/api/*` to core. Product APIs are not hosted by this repository.
 
-All Nest applications enable CORS. Core uses a global validation pipe with property whitelisting and DTO transformation. Core routes are protected by global authentication and role guards unless marked public.
+The core Nest application enables CORS and uses a global validation pipe with property whitelisting and DTO transformation. Core routes are protected by global authentication and role guards unless marked public.
 
 ## 3. Frontend provider and state model
 
@@ -73,7 +70,7 @@ Microsoft sign-in uses MSAL redirect. For API requests, the client first checks 
 
 ### Optional OIDC
 
-When `OIDC_WELL_KNOWN`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are configured, `/signin` shows a button labeled with `OIDC_PROVIDER_LABEL`. The browser starts the authorization-code flow at `/api/auth/oidc/start`; the backend validates a short-lived state cookie, exchanges the code at the provider token endpoint, validates the ID token against the discovered issuer, audience, and JWKS, provisions or links the user, and issues the existing platform-local JWT. A newly provisioned external identity receives an active `Member` membership in **McDermott IT** and the global `General User` role only; it receives no product role, team, project, module designation, or licence allocation. The default callback is `http://localhost:4000/api/auth/oidc/callback`, and the callback returns the JWT only in the frontend URL fragment before the SPA stores the normal local session. `OIDC_SKIP_VERIFY=true` is limited to non-production environments and skips ID-token signature validation; it must not be enabled for production authentication.
+When `OIDC_WELL_KNOWN`, `OIDC_CLIENT_ID`, and `OIDC_CLIENT_SECRET` are configured, `/signin` shows a button labeled with `OIDC_PROVIDER_LABEL`. The browser starts the authorization-code flow at `/api/auth/oidc/start`; the backend validates a short-lived state cookie, exchanges the code at the provider token endpoint, validates the ID token against the discovered issuer, audience, and JWKS, provisions or links the user, and issues the existing platform-local JWT. A newly provisioned external identity receives an active `Member` membership in **Global Organisation** and the global `General User` role only; it receives no product role, team, project, module designation, or licence allocation. The default callback is `http://localhost:4000/api/auth/oidc/callback`, and the callback returns the JWT only in the frontend URL fragment before the SPA stores the normal local session. `OIDC_SKIP_VERIFY=true` is limited to non-production environments and skips ID-token signature validation; it must not be enabled for production authentication.
 
 ### API failure behavior
 
@@ -89,13 +86,13 @@ Core role names seeded by default:
 - `CreditGuard Requestor`
 - `CreditGuard Reviewer`
 
-CreditGuard roles are module-specific: they reference the CreditGuard product and are assigned once per user rather than per organisation. Ordinary organisation Members see a product and can open its licensed session only when they have a matching product-scoped role; `General User` alone does not grant module access. Organisation Owner/Admin memberships and Global Administrator retain administrative product visibility. CreditGuard Requestor and Reviewer can open the workspace, product overview, and Requests only when the selected organisation has an active CreditGuard module assignment. Requestors can create and manage requests. Reviewers can review requests and open Reports. Application Setup remains limited to global and organisation administrators. Screen grants are navigation controls; guarded CreditGuard workflow endpoints introspect the bearer token through core and verify organisation membership because hiding navigation is not authorization.
+Product-scoped roles and module assignments remain in core for administration of separately hosted product runtimes. This repository's frontend exposes administration only and filters product routes from the server-provided menu tree. Menu visibility is not authorization; backend guards remain the security boundary for retained core APIs.
 
-Global role assignments have no organisation ID. Organisation authority is also represented by membership: `Owner`, `Admin`, or `Member`. The default seeded tenant is **McDermott IT**; the core seed converges the database to that single organisation, assigns every product module to it, and places all existing users in it. New local and B2C-provisioned users, as well as users created through global administration, receive an active McDermott IT membership by default.
+Global role assignments have no organisation ID. Organisation authority is also represented by membership: `Owner`, `Admin`, or `Member`. **Global Organisation** is the canonical seeded tenant and the initial `defaultOrgId`; reseeding assigns every existing user an active membership there while preserving other organisations. New local, B2C-provisioned, and administrator-created users receive membership in the configured default organisation, which is Global Organisation on first installation. The Global Organisation membership cannot be manually removed; deleting a user cascades to its membership rows.
 
-The sidebar is data-driven from `GET /api/menus/mine?orgId=...`. Menu trees contain route, icon, display order, product link, and optional `readonly`/`editable` access. Product-linked menus are returned only when the selected organisation has an active module assignment within its validity window. The frontend hides organisation-administration routes from ordinary members and global-only routes outside the global organisation. Backend guards remain the security boundary; hiding navigation is not authorization.
+The sidebar is data-driven from `GET /api/menus/mine?orgId=...`. Menu trees contain route, icon, display order, product link, and optional `readonly`/`editable` access. Product-linked menus are returned only when the selected organisation has an active module assignment within its validity window; this frontend filters those routes because product runtime screens are not included. It also hides organisation-administration routes from ordinary members and global-only routes outside the global organisation. Backend guards remain the security boundary; hiding navigation is not authorization.
 
-The authenticated header exposes Help on every screen. It maps the current pathname to the nearest isolated topic, including dynamic CreditGuard request form, approver, and approval routes, and passes the originating URL so users can return directly to their work. Help content is static frontend documentation and does not reveal inaccessible application records or grant access to documented screens.
+The authenticated header exposes Help on every screen. It maps administration paths to relevant help topics and passes the originating URL so users can return directly to their work. Help content is static frontend documentation and does not reveal inaccessible application records or grant access to documented screens.
 
 ## 6. Route inventory
 
@@ -103,29 +100,17 @@ The authenticated header exposes Help on every screen. It maps the current pathn
 
 | Route | Behavior |
 | --- | --- |
-| `/` | Marketing landing page |
-| `/about` | Product/platform overview |
+| `/` | Redirects to sign-in |
 | `/signin` | Local or B2C sign-in |
 | `/signup` | Local or B2C registration |
 
-### Workspace and product
+### Authenticated workspace
 
 | Route | Behavior |
 | --- | --- |
 | `/app` | Redirects to dashboard |
 | `/app/dashboard` | Selected organisation summary |
-| `/app/products` | Products assigned to selected organisation |
-| `/app/product/:code` | Product lookup, project selection, license acquisition, product landing |
-| `/app/product/CreditGuard/requests` | Request list, filtering, sorting, configurable columns, Notes-only inline editing, request-number links to full editing, and delete |
-| `/app/product/CreditGuard/requests/new` | Initial company guarantee form; saves a server-controlled Draft without approval fields |
-| `/app/product/CreditGuard/requests/:requestId/edit` | Edits Draft requests; Under Review is read-only except attachments, and Reviewed is fully read-only |
-| `/app/product/CreditGuard/requests/:requestId/approvers` | Assigns one configured contact to each required approval role for a Reviewed request |
-| `/app/product/CreditGuard/requests/:requestId/approval` | Selects request PDFs, sends a finalized approval chain to Signit, and displays the persisted envelope and approver actions |
-| `/app/product/CreditGuard/reports` | Request counts and portfolio aggregates |
-| `/app/product/CreditGuard/application-setup/business-entities` | Permission-aware business entity CRUD |
-| `/app/product/CreditGuard/application-setup/module-users` | Organisation-scoped approver CRUD by default, plus a read-only, role-filterable view of eligible module users |
-| `/app/product/CreditGuard/application-setup/integration` | Administrator-only Signit authorization-key configuration |
-| `/app/help` | Searchable application and CreditGuard documentation grouped into isolated topics |
+| `/app/help` | Searchable platform and administration documentation |
 | `/app/help/:topicId` | Direct contextual help for a specific screen or workflow |
 | `/app/resources` | Compatibility redirect to `/app/help` |
 | `/account/settings` | Profile, password, account deletion |
@@ -159,11 +144,11 @@ The authenticated header exposes Help on every screen. It maps the current pathn
 
 Unknown routes redirect to `/`.
 
-## 7. Organisation and product context
+## 7. Organisation and product access contracts
 
-The selected organisation drives menus, products, administration leases, and all tenant-scoped calls. Products are loaded with `GET /api/products?orgId=<id>`.
+The selected organisation drives menus, product assignments, administration leases, and all tenant-scoped calls. Product catalog and licensing APIs remain in core for administration, but this frontend does not open product runtimes.
 
-Before a product opens:
+When an external product client opens a product:
 
 1. Resolve the product by case-insensitive code.
 2. Load `/organisations/:orgId/modules/:productId/projects`.
@@ -194,7 +179,9 @@ Concurrent session creation is transactional. Core locks the organisation-module
 
 All tenant-sensitive queries must be scoped by organisation and checked against the authenticated user's authority. New APIs must not trust a client-provided organisation ID without authorization.
 
-## 9. CreditGuard logic
+## 9. Retained CreditGuard data contracts
+
+The following CreditGuard workflow descriptions document retained schemas, API contracts, and audit semantics. The CreditGuard service and product-facing frontend are not included here, so these workflows are not runnable from this repository.
 
 CreditGuard requests belong to an organisation and may belong to a project. The list flow opens a valid product session before querying `/creditguard-api/requests?orgId=...&projectId=...`.
 
@@ -260,8 +247,7 @@ Important relationships:
 ### Product databases
 
 - CreditGuard stores requests, reviewer assignment snapshots, request details, business entities, attachments, organisation-scoped approver contacts, and Signit envelope initiation references.
-- Core stores each product connection's database type, host, port, database, username, encryption flag, and encrypted password. Existing records default to PostgreSQL. PRIME defaults to a local Microsoft SQL Server target at `localhost:1433`, database `prime`, with connection encryption enabled; saving still requires an administrator-supplied password, which is encrypted at rest and never returned to the browser.
-- The opt-in `mssql` profile in `infra/docker-compose.yml` can run `mssql_server` from SQL Server 2022 Developer and idempotently create the `prime` database. The required `MSSQL_SA_PASSWORD` is supplied through untracked `infra/.env`; it is not committed. Use `/opt/mssql-tools18/bin/sqlcmd` inside the current image. Starting Compose without the profile remains PostgreSQL-only.
+- Core stores each product connection's database type, host, port, database, username, encryption flag, and encrypted password. Existing records default to PostgreSQL. PRIME's admin connection defaults to a Microsoft SQL Server target at `localhost:1433`, database `prime`, with connection encryption enabled; this repository does not provision that database. Saving still requires an administrator-supplied password, which is encrypted at rest and never returned to the browser.
 - PRIME currently stores only a PostgreSQL-backed placeholder row type. The admin MSSQL connection record is configuration for the intended PRIME data source; converting PRIME's Drizzle schema and runtime driver to SQL Server requires a separately approved architecture and migration change.
 - Cross-database operations are not distributed transactions.
 
@@ -285,7 +271,7 @@ Seed reruns restore seeded role-menu grants. A route rename may leave an obsolet
 | --- | --- |
 | Core | `CORE_DATABASE_URL`, `PORT`, `CORS_ORIGIN`, `B2C_TENANT_NAME`, `B2C_POLICY_NAME`, `B2C_CLIENT_ID`, optional `B2C_ISSUER`/`B2C_JWKS_URI`, `LOCAL_JWT_SECRET`, `LOCAL_JWT_EXPIRES_IN`, `CONNECTION_SECRET_KEY`, `CREDITGUARD_INTERNAL_API_KEY`, `SESSION_HEARTBEAT_WINDOW_SECONDS`, emergency-only `NEXT_PRIVATE_SMTP_UNSAFE_IGNORE_TLS`, seed admin values |
 | CreditGuard | `CREDITGUARD_DATABASE_URL`, `CORE_API_URL`, `CREDITGUARD_INTERNAL_API_KEY`, `PORT`, `CORS_ORIGIN`, `DOCUMENT_STORAGE_PROVIDER`, `DOCUMENT_LOCAL_ROOT`, `DOCUMENT_MAX_FILE_SIZE_MB`, `DOCUMENT_MAX_FILES_PER_REQUEST`, `AZURE_STORAGE_ACCOUNT_NAME`, `AZURE_STORAGE_CONTAINER`, optional `AZURE_STORAGE_CONNECTION_STRING` |
-| PRIME | `PRIME_DATABASE_URL`, `PORT`, `CORS_ORIGIN`; local MSSQL container uses `MSSQL_SA_PASSWORD` from untracked `infra/.env` |
+| PRIME | `PRIME_DATABASE_URL`, `PORT`, `CORS_ORIGIN` |
 | Frontend | `VITE_APP_NAME`, `VITE_API_BASE`, B2C tenant/policy/client/scope values |
 
 ## 13. Testing contract

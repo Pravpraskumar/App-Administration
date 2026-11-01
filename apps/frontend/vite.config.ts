@@ -25,10 +25,6 @@ export default defineConfig(({ mode }) => {
       allowedHosts,
       proxy: {
         '/api': env.VITE_CORE_API_URL || 'http://localhost:4000',
-        '/creditguard-api': {
-          target: env.VITE_CREDITGUARD_API_URL || 'http://localhost:4101',
-          rewrite: (path) => path.replace(/^\/creditguard-api/, '/api'),
-        },
       },
     },
     preview: {
